@@ -53,6 +53,7 @@ use richter::{
     },
 };
 use structopt::StructOpt;
+use wgpu::{TextureView, TextureViewDescriptor};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget},
@@ -70,7 +71,6 @@ struct ClientProgram {
     window_dimensions_changed: bool,
 
     surface: wgpu::Surface,
-    swap_chain: RefCell<wgpu::SwapChain>,
     gfx_state: RefCell<GraphicsState>,
     ui_renderer: Rc<UiRenderer>,
 
@@ -101,12 +101,13 @@ impl ClientProgram {
         )));
         input.borrow_mut().bind_defaults();
 
-        let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
+        let instance = wgpu::Instance::new(wgpu::Backends::PRIMARY);
         let surface = unsafe { instance.create_surface(&window) };
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
                 compatible_surface: Some(&surface),
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -115,9 +116,8 @@ impl ClientProgram {
                 &wgpu::DeviceDescriptor {
                     label: None,
                     features: wgpu::Features::PUSH_CONSTANTS
-                        | wgpu::Features::SAMPLED_TEXTURE_BINDING_ARRAY
-                        | wgpu::Features::SAMPLED_TEXTURE_ARRAY_DYNAMIC_INDEXING
-                        | wgpu::Features::SAMPLED_TEXTURE_ARRAY_NON_UNIFORM_INDEXING,
+                        | wgpu::Features::TEXTURE_BINDING_ARRAY
+                        | wgpu::Features::SAMPLED_TEXTURE_AND_STORAGE_BUFFER_ARRAY_NON_UNIFORM_INDEXING,
                     limits: wgpu::Limits {
                         max_sampled_textures_per_shader_stage: 256,
                         max_uniform_buffer_binding_size: 65536,
@@ -134,16 +134,16 @@ impl ClientProgram {
             .await
             .unwrap();
         let size: Extent2d = window.inner_size().into();
-        let swap_chain = RefCell::new(device.create_swap_chain(
+        /*let swap_chain = RefCell::new(device.create_swap_chain(
             &surface,
             &wgpu::SwapChainDescriptor {
-                usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                 format: DIFFUSE_ATTACHMENT_FORMAT,
                 width: size.width,
                 height: size.height,
                 present_mode: wgpu::PresentMode::Immediate,
             },
-        ));
+        ));*/
 
         let vfs = Rc::new(vfs);
 
@@ -211,7 +211,7 @@ impl ClientProgram {
             window,
             window_dimensions_changed: false,
             surface,
-            swap_chain,
+            //swap_chain,
             gfx_state: RefCell::new(gfx_state),
             ui_renderer,
             game,
@@ -221,26 +221,32 @@ impl ClientProgram {
 
     /// Builds a new swap chain with the specified present mode and the window's current dimensions.
     fn recreate_swap_chain(&self, present_mode: wgpu::PresentMode) {
-        let winit::dpi::PhysicalSize { width, height } = self.window.inner_size();
+        /*let winit::dpi::PhysicalSize { width, height } = self.window.inner_size();
         let swap_chain = self.gfx_state.borrow().device().create_swap_chain(
             &self.surface,
             &wgpu::SwapChainDescriptor {
-                usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                 format: DIFFUSE_ATTACHMENT_FORMAT,
                 width,
                 height,
                 present_mode,
             },
         );
-        let _ = self.swap_chain.replace(swap_chain);
+        let _ = self.swap_chain.replace(swap_chain);*/
     }
 
     fn render(&mut self) {
-        let swap_chain_output = self.swap_chain.borrow_mut().get_current_frame().unwrap();
+        let output = self.surface.get_current_texture().unwrap();
+
+        let view = output
+            .texture
+            .create_view(&TextureViewDescriptor::default());
+
+        // let swap_chain_output = self.swap_chain.borrow_mut().get_current_frame().unwrap();
         let winit::dpi::PhysicalSize { width, height } = self.window.inner_size();
         self.game.render(
             &self.gfx_state.borrow(),
-            &swap_chain_output.output.view,
+            &view,
             width,
             height,
             &self.console.borrow(),

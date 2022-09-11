@@ -106,6 +106,7 @@ impl BrushPipeline {
 pub struct VertexPushConstants {
     pub transform: Matrix4<f32>,
     pub model_view: Matrix4<f32>,
+    pub texture_kind: u32,
 }
 
 #[repr(C)]
@@ -119,7 +120,7 @@ const BIND_GROUP_LAYOUT_ENTRIES: &[&[wgpu::BindGroupLayoutEntry]] = &[
         // diffuse texture, updated once per face
         wgpu::BindGroupLayoutEntry {
             binding: 0,
-            visibility: wgpu::ShaderStage::FRAGMENT,
+            visibility: wgpu::ShaderStages::FRAGMENT,
             ty: wgpu::BindingType::Texture {
                 view_dimension: wgpu::TextureViewDimension::D2,
                 sample_type: wgpu::TextureSampleType::Float { filterable: true },
@@ -130,7 +131,7 @@ const BIND_GROUP_LAYOUT_ENTRIES: &[&[wgpu::BindGroupLayoutEntry]] = &[
         // fullbright texture
         wgpu::BindGroupLayoutEntry {
             binding: 1,
-            visibility: wgpu::ShaderStage::FRAGMENT,
+            visibility: wgpu::ShaderStages::FRAGMENT,
             ty: wgpu::BindingType::Texture {
                 view_dimension: wgpu::TextureViewDimension::D2,
                 sample_type: wgpu::TextureSampleType::Float { filterable: true },
@@ -144,7 +145,7 @@ const BIND_GROUP_LAYOUT_ENTRIES: &[&[wgpu::BindGroupLayoutEntry]] = &[
         wgpu::BindGroupLayoutEntry {
             count: NonZeroU32::new(4),
             binding: 0,
-            visibility: wgpu::ShaderStage::FRAGMENT,
+            visibility: wgpu::ShaderStages::FRAGMENT,
             ty: wgpu::BindingType::Texture {
                 view_dimension: wgpu::TextureViewDimension::D2,
                 sample_type: wgpu::TextureSampleType::Float { filterable: true },
@@ -220,7 +221,7 @@ impl Pipeline for BrushPipeline {
     fn vertex_buffer_layouts() -> Vec<wgpu::VertexBufferLayout<'static>> {
         vec![wgpu::VertexBufferLayout {
             array_stride: size_of::<BrushVertex>() as u64,
-            step_mode: wgpu::InputStepMode::Vertex,
+            step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &VERTEX_ATTRIBUTES[..],
         }]
     }
@@ -247,7 +248,7 @@ type Position = [f32; 3];
 type Normal = [f32; 3];
 type DiffuseTexcoord = [f32; 2];
 type LightmapTexcoord = [f32; 2];
-type LightmapAnim = [u8; 4];
+type LightmapAnim = [u8; 64];
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -310,7 +311,7 @@ struct BrushFace {
     texture_id: usize,
 
     lightmap_ids: Vec<usize>,
-    light_styles: [u8; 4],
+    light_styles: [u8; 64],
 
     /// Indicates whether the face should be drawn this frame.
     ///
@@ -677,7 +678,7 @@ impl BrushRendererBuilder {
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: None,
                 contents: unsafe { any_slice_as_bytes(self.vertices.as_slice()) },
-                usage: wgpu::BufferUsage::VERTEX,
+                usage: wgpu::BufferUsages::VERTEX,
             });
 
         Ok(BrushRenderer {

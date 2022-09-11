@@ -139,7 +139,7 @@ pub fn texture_descriptor<'a>(
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format,
-        usage: wgpu::TextureUsage::COPY_DST | wgpu::TextureUsage::SAMPLED,
+        usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
     }
 }
 
@@ -163,6 +163,7 @@ pub fn create_texture<'a>(
             texture: &texture,
             mip_level: 0,
             origin: wgpu::Origin3d::ZERO,
+            aspect: wgpu::TextureAspect::All,
         },
         data.data(),
         wgpu::ImageDataLayout {
@@ -308,7 +309,7 @@ impl GraphicsState {
         let frame_uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("frame uniform buffer"),
             size: size_of::<world::FrameUniforms>() as wgpu::BufferAddress,
-            usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         let entity_uniform_buffer = RefCell::new(DynamicUniformBuffer::new(&device));

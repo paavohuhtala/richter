@@ -42,7 +42,7 @@ lazy_static! {
         vec![
             wgpu::BindGroupLayoutEntry {
                 binding:0,
-                visibility:wgpu::ShaderStage::all(),
+                visibility:wgpu::ShaderStages::all(),
                 ty:wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
@@ -57,7 +57,7 @@ lazy_static! {
             // TODO: move this to push constants once they're exposed in wgpu
             wgpu::BindGroupLayoutEntry {
                 binding:0,
-                visibility:wgpu::ShaderStage::VERTEX,
+                visibility:wgpu::ShaderStages::VERTEX,
                 ty:wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: true,
@@ -69,15 +69,15 @@ lazy_static! {
             // diffuse and fullbright sampler
             wgpu::BindGroupLayoutEntry {
                 binding:1,
-                visibility:wgpu::ShaderStage::FRAGMENT,
-                ty:wgpu::BindingType::Sampler { filtering: true, comparison: false },
+                visibility:wgpu::ShaderStages::FRAGMENT,
+                ty:wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                 count:None,
             },
             // lightmap sampler
             wgpu::BindGroupLayoutEntry {
                 binding:2,
-                visibility:wgpu::ShaderStage::FRAGMENT,
-                ty:wgpu::BindingType::Sampler { filtering: true, comparison: false },
+                visibility:wgpu::ShaderStages::FRAGMENT,
+                ty:wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                 count:None,
             },
         ],
@@ -127,9 +127,10 @@ impl Pipeline for WorldPipelineBase {
             strip_index_format: None,
             front_face: wgpu::FrontFace::Cw,
             cull_mode: None,
-            clamp_depth: false,
+            //clamp_depth: false,
             polygon_mode: wgpu::PolygonMode::Fill,
             conservative: false,
+            ..Default::default()
         }
     }
 
@@ -139,19 +140,19 @@ impl Pipeline for WorldPipelineBase {
             wgpu::ColorTargetState {
                 format: DIFFUSE_ATTACHMENT_FORMAT,
                 blend: Some(wgpu::BlendState::REPLACE),
-                write_mask: wgpu::ColorWrite::ALL,
+                write_mask: wgpu::ColorWrites::ALL,
             },
             // normal attachment
             wgpu::ColorTargetState {
                 format: NORMAL_ATTACHMENT_FORMAT,
                 blend: Some(wgpu::BlendState::REPLACE),
-                write_mask: wgpu::ColorWrite::ALL,
+                write_mask: wgpu::ColorWrites::ALL,
             },
             // light attachment
             wgpu::ColorTargetState {
                 format: LIGHT_ATTACHMENT_FORMAT,
                 blend: Some(wgpu::BlendState::REPLACE),
-                write_mask: wgpu::ColorWrite::ALL,
+                write_mask: wgpu::ColorWrites::ALL,
             },
         ]
     }
@@ -468,6 +469,7 @@ impl WorldRenderer {
             Update(bump.alloc(brush::VertexPushConstants {
                 transform: camera.view_projection(),
                 model_view: camera.view(),
+                texture_kind: 0,
             })),
             Clear,
             Clear,
@@ -497,6 +499,7 @@ impl WorldRenderer {
                         Update(bump.alloc(brush::VertexPushConstants {
                             transform: self.calculate_mvp_transform(camera, ent),
                             model_view: self.calculate_mv_transform(camera, ent),
+                            texture_kind: 0,
                         })),
                         Clear,
                         Clear,
